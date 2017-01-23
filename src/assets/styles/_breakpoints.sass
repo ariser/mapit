@@ -1,0 +1,22 @@
+@import bootstrap/variables
+
+
+=on-mobile
+  @media screen and ( max-width: $screen-xs-max )
+    @content
+
+=on-tablet-and-mobile
+  @media screen and ( max-width: $screen-sm-max )
+    @content
+
+=on-tablet-only
+  @media screen and ( min-width: $screen-sm-min ) and ( max-width: $screen-sm-max )
+    @content
+
+=on-medium-screen
+  @media screen and ( min-width: $screen-md-min ) and ( max-width: $screen-md-max )
+    @content
+
+=on-desktop
+  @media screen and ( min-width: $screen-md-max )
+    @content
