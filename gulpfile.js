@@ -1,50 +1,70 @@
-const gulp                    = require('gulp'),
-      gutil                   = require('gulp-util'),
-      runSequence             = require('run-sequence'),
-      plumber                 = require('gulp-plumber'),
-      useref                  = require('gulp-useref'),
-      rev                     = require('gulp-rev'),
-      revReplace              = require('gulp-rev-replace'),
+const gulp = require('gulp'),
+    gutil = require('gulp-util'),
+    runSequence = require('run-sequence'),
+    plumber = require('gulp-plumber'),
+    useref = require('gulp-useref'),
+    rev = require('gulp-rev'),
+    revReplace = require('gulp-rev-replace'),
 
-      webpack                 = require('webpack-stream'),
-      webpackDevConfig        = require('./webpack.config.js'),
-      webpackProductionConfig = require('./webpack.config.production.js'),
-      del                     = require('del'),
+    webpack = require('webpack-stream'),
+    webpackDevConfig = require('./webpack.config.js'),
+    webpackProductionConfig = require('./webpack.config.production.js'),
+    del = require('del'),
 
-      sass                    = require('gulp-ruby-sass'),
-      sourcemaps              = require('gulp-sourcemaps'),
-      prefix                  = require('gulp-autoprefixer'),
+    sass = require('gulp-ruby-sass'),
+    sourcemaps = require('gulp-sourcemaps'),
+    prefix = require('gulp-autoprefixer'),
 
-      cleanCSS                = require('gulp-clean-css'),
-      uglifyJS                = require('gulp-uglify'),
-      htmlmin                 = require('gulp-htmlmin');
+    cleanCSS = require('gulp-clean-css'),
+    uglifyJS = require('gulp-uglify'),
+    htmlmin = require('gulp-htmlmin'),
+    imageMin = require('gulp-imagemin'),
+    imageResize = require('gulp-image-resize');
 
 const config = {
+    imageMin: {
+        progressive: true,
+        interlaced: true
+    },
     htmlmin: {
         collapseWhitespace: true
     },
-    paths:   {
-        npm:   'node_modules',
-        src:   {
-            root:    'src',
-            views:   'src/views',
-            assets:  'src/assets',
+    paths: {
+        npm: 'node_modules',
+        src: {
+            root: 'src',
+            views: 'src/views',
+            assets: 'src/assets',
             scripts: 'src/assets/scripts',
-            styles:  'src/assets/styles',
-            images:  'src/assets/images',
-            fonts:   'src/assets/fonts'
+            styles: 'src/assets/styles',
+            images: 'src/assets/images',
+            fonts: 'src/assets/fonts'
         },
         build: {
-            root:   'public',
-            views:  'public',
+            root: 'public',
+            views: 'public',
             assets: 'public/assets',
-            js:     'public/assets/js',
-            css:    'public/assets/css',
+            js: 'public/assets/js',
+            css: 'public/assets/css',
             images: 'public/assets/img',
-            fonts:  'public/assets/fonts'
+            fonts: 'public/assets/fonts'
         }
     }
 };
+
+gulp.task('images:clean', function () {
+    return del([config.paths.build.images + '/**']);
+});
+gulp.task('images', function () {
+    return gulp.src(config.paths.src.images + '/**/*')
+        .pipe(imageResize({
+            width: 250,
+            height: 400,
+            crop: true
+        }))
+        .pipe(imageMin(config.imageMin))
+        .pipe(gulp.dest(config.paths.build.images));
+});
 
 gulp.task('views:clean', function () {
     return del([config.paths.build.views + '/**']);
@@ -71,8 +91,8 @@ gulp.task('styles', ['css', 'sass']);
 gulp.task('sass', function () {
     return sass(config.paths.src.styles + '/**/*.sass', {
         sourcemap: true,
-        compass:   true,
-        loadPath:  [
+        compass: true,
+        loadPath: [
             config.paths.npm + '/normalize-scss/sass',
             config.paths.npm + '/bootstrap-sass/assets/stylesheets'
         ]
@@ -105,7 +125,11 @@ gulp.task('webpack', function () {
         .pipe(webpack(process.env.NODE_ENV === 'production' ? webpackProductionConfig : webpackDevConfig))
         .pipe(gulp.dest(config.paths.build.js));
 });
-gulp.task('scripts', ['webpack']);
+gulp.task('workers', function () {
+    return gulp.src(config.paths.src.scripts + '/workers/**/*.js')
+        .pipe(gulp.dest(config.paths.build.js + '/workers'));
+});
+gulp.task('scripts', ['webpack', 'workers']);
 gulp.task('scripts:min', ['scripts'], function () {
     return gulp.src([config.paths.build.js + '/**/*.js', '!' + config.paths.build.js + '/**/*.min.js'])
         .pipe(plumber())
@@ -146,7 +170,7 @@ gulp.task('revision:views', ['revision:assets'], function () {
         .pipe(gulp.dest(config.paths.build.views));
 });
 
-gulp.task('clean', ['views:clean', 'styles:clean', 'scripts:clean', 'revision:clean']);
+gulp.task('clean', ['views:clean', 'styles:clean', 'scripts:clean', 'revision:clean', 'images:clean']);
 
 gulp.task('flat-ui', ['flat-ui:styles', 'flat-ui:fonts']);
 gulp.task('flat-ui:styles', function () {
@@ -164,7 +188,7 @@ gulp.task('flat-ui:fonts', function () {
 gulp.task('build:dev', ['set-dev-node-env'], function (next) {
     runSequence(
         'clean',
-        ['fonts'],
+        ['fonts', 'images'],
         ['views:dev', 'styles', 'scripts'],
         next
     );
@@ -173,7 +197,7 @@ gulp.task('build:dev', ['set-dev-node-env'], function (next) {
 gulp.task('build:production', ['set-prod-node-env'], function (next) {
     runSequence(
         'clean', // clean assets dir
-        ['fonts'],
+        ['fonts', 'images'],
         ['styles', 'styles:min', 'scripts', 'scripts:min'],
         'views:production',
         'views:min',
