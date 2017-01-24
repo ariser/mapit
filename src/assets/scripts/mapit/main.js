@@ -17,12 +17,15 @@ function generate() {
     const tiles = _.cloneDeep(tiles_src);
 
     const initial_tile = random_tile(tiles);
+    initial_tile.rotate_randomly();
     place_tile(initial_tile);
 
     OPEN.push(...initial_tile.gaps);
 
-    while (OPEN.length && tiles.length && c < 6) {
-        const current_gap = OPEN.pop();
+    while (OPEN.length && tiles.length && c < 100) {
+        const index = _.random(0, OPEN.length - 1);
+        const current_gap = OPEN[index];
+        OPEN.splice(index, 1);
         const next = find_tile(current_gap, tiles);
         if (next) {
             place_tile(next.tile);
@@ -45,28 +48,30 @@ function find_tile(gap, tiles) {
         control[index] = false;
 
         let chosen_tile = _.cloneDeep(tiles[index]);
+        chosen_tile.rotate_randomly();
 
-        let gaps = _.filter(chosen_tile.gaps, tile_gap => tile_gap.size === gap.size && gap.orientation === tile_gap.orientation && gap.align != tile_gap.align);
+        for (let i = 0; i < 4; i++) {
+            let chosen_gap = _.filter(chosen_tile.gaps, tile_gap => tile_gap.size === gap.size && gap.orientation === tile_gap.orientation && gap.align != tile_gap.align)[0];
 
-        if (!gaps.length) {
-            continue;
-        }
+            if (!chosen_gap || !can_be_placed(chosen_tile, gap.position.x - chosen_gap.position.x, gap.position.y - chosen_gap.position.y)) {
+                chosen_tile.rotate();
+                continue;
+            }
 
-        let chosen_gap = gaps[0];
+            chosen_tile.position.x = gap.position.x - chosen_gap.position.x;
+            chosen_tile.position.y = gap.position.y - chosen_gap.position.y;
 
-        chosen_tile.position.x = gap.position.x - chosen_gap.position.x;
-        chosen_tile.position.y = gap.position.y - chosen_gap.position.y;
+            _.forEach(chosen_tile.gaps, tile_gap => {
+                tile_gap.position.x += chosen_tile.position.x;
+                tile_gap.position.y += chosen_tile.position.y;
+            });
 
-        _.forEach(chosen_tile.gaps, tile_gap => {
-            tile_gap.position.x += chosen_tile.position.x;
-            tile_gap.position.y += chosen_tile.position.y;
-        });
+            tiles[index].limit -= 1;
 
-        tiles[index].limit -= 1;
-
-        return {
-            tile: chosen_tile,
-            gap: chosen_gap
+            return {
+                tile: chosen_tile,
+                gap: chosen_gap
+            }
         }
     }
     return null;
@@ -83,6 +88,16 @@ function place_tile(tile) {
     tile.position.x = x;
     tile.position.y = y;
     PLACED_TILES.push(tile);
+}
+
+function can_be_placed(tile, x ,y) {
+    for (let i = x; i < x + tile.width; i++) {
+        if (!MAP[i]) MAP[i] = [];
+        for (let j = y; j < y + tile.height; j++) {
+            if (MAP[i][j] == 1) return false;
+        }
+    }
+    return true;
 }
 
 function random_tile(from_tiles) {
@@ -113,7 +128,28 @@ function render(canvas, tiles) {
         img.onload = function () {
             let x = (tile.position.x - xMin) * SQUARE_SIZE;
             let y = (tile.position.y - yMin) * SQUARE_SIZE;
-            ctx.drawImage(img, x, y);
+
+            if (!tile.rotation) {
+                ctx.drawImage(img, x, y);
+            } else {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(tile.rotation * Math.PI / 180);
+                if (tile.rotation === 90) {
+                    x = 0;
+                    y = -img.height;
+                }
+                if (tile.rotation === 180) {
+                    x = -img.width;
+                    y = -img.height;
+                }
+                if (tile.rotation === 270) {
+                    x = -img.width;
+                    y = 0;
+                }
+                ctx.drawImage(img, x, y);
+                ctx.restore();
+            }
         };
         img.src = tile.image;
     });

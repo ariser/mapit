@@ -59,8 +59,7 @@ gulp.task('images', function () {
     return gulp.src(config.paths.src.images + '/**/*')
         .pipe(imageResize({
             width: 250,
-            height: 400,
-            crop: true
+            height: 400
         }))
         .pipe(imageMin(config.imageMin))
         .pipe(gulp.dest(config.paths.build.images));
