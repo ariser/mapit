@@ -45,17 +45,17 @@ const room_bottom_right = new Tile({
 });
 
 
-room_top_left.priority.right = [room_top_right];
-room_top_left.priority.bottom = [room_bottom_left];
+room_top_left.gaps[0].priority = [room_top_right];
+room_top_left.gaps[1].priority = [room_bottom_left];
 
-room_top_right.priority.left = [room_top_left];
-room_top_right.priority.bottom = [room_bottom_right];
+room_top_right.gaps[0].priority = [room_top_left];
+room_top_right.gaps[2].priority = [room_bottom_right];
 
-room_bottom_left.priority.right = [room_bottom_right];
-room_bottom_left.priority.top = [room_top_left];
+room_bottom_left.gaps[1].priority = [room_bottom_right];
+room_bottom_left.gaps[2].priority = [room_top_left];
 
-room_bottom_right.priority.left = [room_bottom_left];
-room_bottom_right.priority.top = [room_top_right];
+room_bottom_right.gaps[0].priority = [room_bottom_left];
+room_bottom_right.gaps[1].priority = [room_top_right];
 
 
 export default [

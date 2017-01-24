@@ -7,12 +7,12 @@ let OPEN = []; // Gaps that are available for connection
 let MAP = []; // two-dim array representing map in 1 and 0 for intersection checking
 let PLACED_TILES = []; // for further render
 
-function generate() {
+function generate(maxTiles) {
     OPEN = [];
     MAP = [];
     PLACED_TILES = [];
 
-    var c = 0;
+    let tilesUsed = 0;
 
     const tiles = _.cloneDeep(tiles_src);
 
@@ -22,16 +22,19 @@ function generate() {
 
     OPEN.push(...initial_tile.gaps);
 
-    while (OPEN.length && tiles.length && c < 100) {
-        const index = _.random(0, OPEN.length - 1);
+    while (OPEN.length && tiles.length && tilesUsed < maxTiles) {
+        let index = _.findIndex(OPEN, gap => gap.priority.length > 0);
+        if (index < 0) {
+            index = _.random(0, OPEN.length - 1);
+        }
         const current_gap = OPEN[index];
         OPEN.splice(index, 1);
         const next = find_tile(current_gap, tiles);
         if (next) {
             place_tile(next.tile);
             OPEN.push(..._.reject(next.tile.gaps, gap => gap == next.gap));
+            tilesUsed++;
         }
-        c++;
     }
 
     return PLACED_TILES;
@@ -39,16 +42,32 @@ function generate() {
 
 function find_tile(gap, tiles) {
     const control = _.map(tiles, tile => tile.limit > 0);
+    let index;
+    let usingPriority = false;
+
+    if (gap.priority.length) {
+        let i = _.random(0, gap.priority.length - 1);
+        index = _.findIndex(tiles, tile => tile.image === gap.priority[i].image);
+        usingPriority = true;
+    }
+
     while (_.some(control)) {
-        let index;
-        do {
+        while (!control[index]) {
             index = _.random(0, tiles.length - 1);
-        } while (!control[index]);
+            usingPriority = false;
+        }
 
         control[index] = false;
 
         let chosen_tile = _.cloneDeep(tiles[index]);
-        chosen_tile.rotate_randomly();
+        if (usingPriority) {
+            var rotations = gap.rotation / 90;
+            for (let i = 0; i < rotations; i++) {
+                chosen_tile.rotate();
+            }
+        } else {
+            chosen_tile.rotate_randomly();
+        }
 
         for (let i = 0; i < 4; i++) {
             let chosen_gap = _.filter(chosen_tile.gaps, tile_gap => tile_gap.size === gap.size && gap.orientation === tile_gap.orientation && gap.align != tile_gap.align)[0];
@@ -90,7 +109,7 @@ function place_tile(tile) {
     PLACED_TILES.push(tile);
 }
 
-function can_be_placed(tile, x ,y) {
+function can_be_placed(tile, x, y) {
     for (let i = x; i < x + tile.width; i++) {
         if (!MAP[i]) MAP[i] = [];
         for (let j = y; j < y + tile.height; j++) {

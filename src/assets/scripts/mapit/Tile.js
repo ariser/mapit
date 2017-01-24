@@ -12,13 +12,6 @@ class Tile {
 
     gaps = [];
 
-    priority = {
-        top: [],
-        right: [],
-        bottom: [],
-        left: []
-    };
-
     rotation = 0;
 
     position = {
@@ -66,6 +59,7 @@ class Tile {
             gap.align = newAlign;
             gap.position.x = newX;
             gap.position.y = newY;
+            gap.rotation = this.rotation;
         });
         [this.width, this.height] = [this.height, this.width];
     }

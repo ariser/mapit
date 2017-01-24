@@ -24,6 +24,9 @@ class Gap {
         y: null
     };
     level = 0;
+    rotation = 0;
+
+    priority = [];
 }
 
 export default Gap;
